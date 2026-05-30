@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { recordTransaction, type StockItem, type TransactionType } from "@/lib/inventory";
+import { recordTransaction, formatCurrency, type StockItem, type TransactionType } from "@/lib/inventory";
 
 type Props = {
   items: StockItem[];
