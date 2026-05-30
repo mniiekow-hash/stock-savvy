@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Boxes } from "lucide-react";
+import { ArrowLeft, Boxes, Layers, PackageCheck, Wallet, TrendingUp } from "lucide-react";
 import {
   fetchItem,
   fetchBatches,
@@ -83,24 +83,28 @@ function ItemDetailPage() {
                 label="Remaining quantity"
                 value={`${formatNumber(item.current_quantity)} ${item.unit}`}
                 hint="On the shelf right now"
+                icon={PackageCheck}
                 tone="primary"
               />
               <StatCard
                 label="Total ever purchased"
                 value={`${formatNumber(totalQty)} ${item.unit}`}
                 hint={`${batches.length} batch${batches.length === 1 ? "" : "es"}`}
+                icon={Layers}
                 tone="accent"
               />
               <StatCard
                 label="Total spent"
                 value={formatCurrency(totalSpent)}
                 hint="Across all batches"
+                icon={Wallet}
                 tone="success"
               />
               <StatCard
                 label="Latest / avg unit price"
                 value={formatCurrency(latest?.unit_price ?? 0)}
                 hint={`Avg ${formatCurrency(avgUnit)}`}
+                icon={TrendingUp}
                 tone="warning"
               />
             </section>

@@ -78,7 +78,7 @@ export async function fetchBatches(itemId: string): Promise<StockBatch[]> {
     .eq("item_id", itemId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as StockBatch[];
+  return (data ?? []) as unknown as StockBatch[];
 }
 
 export async function fetchTransactions(limit = 25): Promise<
