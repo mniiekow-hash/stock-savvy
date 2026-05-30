@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      stock_batches: {
+        Row: {
+          created_at: string
+          id: string
+          is_opening_stock: boolean
+          item_id: string
+          note: string | null
+          pack_unit: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_opening_stock?: boolean
+          item_id: string
+          note?: string | null
+          pack_unit?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_opening_stock?: boolean
+          item_id?: string
+          note?: string | null
+          pack_unit?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_batches_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_items: {
         Row: {
           created_at: string
