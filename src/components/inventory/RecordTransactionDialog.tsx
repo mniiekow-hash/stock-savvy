@@ -23,7 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { recordTransaction, formatCurrency, type StockItem, type TransactionType } from "@/lib/inventory";
+import {
+  createPurchaseBatch,
+  recordTransaction,
+  formatCurrency,
+  PACK_UNITS,
+  type StockItem,
+  type TransactionType,
+} from "@/lib/inventory";
 
 type Props = {
   items: StockItem[];
@@ -32,36 +39,58 @@ type Props = {
   defaultType?: TransactionType;
 };
 
-export function RecordTransactionDialog({ items, defaultItemId, trigger, defaultType = "purchase" }: Props) {
+export function RecordTransactionDialog({
+  items,
+  defaultItemId,
+  trigger,
+  defaultType = "purchase",
+}: Props) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<TransactionType>(defaultType);
   const [itemId, setItemId] = useState(defaultItemId ?? "");
   const [quantity, setQuantity] = useState("");
+  const [packUnit, setPackUnit] = useState("crates");
+  const [totalPrice, setTotalPrice] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [note, setNote] = useState("");
   const qc = useQueryClient();
 
   const selected = items.find((i) => i.id === itemId);
+  const qtyN = Number(quantity) || 0;
+  const totN = Number(totalPrice) || 0;
+  const derivedUnit = qtyN > 0 ? totN / qtyN : 0;
 
   const mutation = useMutation({
-    mutationFn: () =>
-      recordTransaction({
+    mutationFn: async () => {
+      if (type === "purchase") {
+        return createPurchaseBatch({
+          item_id: itemId,
+          quantity: qtyN,
+          pack_unit: packUnit,
+          total_price: totN,
+          note,
+        });
+      }
+      return recordTransaction({
         item_id: itemId,
         type,
-        quantity: Number(quantity),
-        unit_price: Number(unitPrice),
+        quantity: qtyN,
+        unit_price: Number(unitPrice) || 0,
         note,
-      }),
+      });
+    },
     onSuccess: () => {
-      toast.success("Transaction recorded");
+      toast.success(type === "purchase" ? "New batch recorded" : "Transaction recorded");
       qc.invalidateQueries({ queryKey: ["items"] });
       qc.invalidateQueries({ queryKey: ["transactions"] });
+      qc.invalidateQueries({ queryKey: ["batches"] });
       setQuantity("");
+      setTotalPrice("");
       setUnitPrice("");
       setNote("");
       setOpen(false);
     },
-    onError: (e: any) => toast.error(e?.message ?? "Failed to record transaction"),
+    onError: (e: any) => toast.error(e?.message ?? "Failed to record"),
   });
 
   function onOpenChange(o: boolean) {
@@ -70,8 +99,11 @@ export function RecordTransactionDialog({ items, defaultItemId, trigger, default
       setType(defaultType);
       setItemId(defaultItemId ?? "");
       setQuantity("");
+      setTotalPrice("");
       setUnitPrice("");
       setNote("");
+      const it = items.find((i) => i.id === (defaultItemId ?? ""));
+      if (it) setPackUnit(it.unit || "crates");
     }
   }
 
@@ -88,7 +120,7 @@ export function RecordTransactionDialog({ items, defaultItemId, trigger, default
         <DialogHeader>
           <DialogTitle>Record stock transaction</DialogTitle>
           <DialogDescription>
-            Log a purchase of new goods, a sale, or an adjustment. Stock levels update automatically.
+            Log a new purchase (creates a new batch), a sale, or an adjustment.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -96,7 +128,8 @@ export function RecordTransactionDialog({ items, defaultItemId, trigger, default
           onSubmit={(e) => {
             e.preventDefault();
             if (!itemId) return toast.error("Select an item");
-            if (!quantity || Number(quantity) === 0) return toast.error("Enter a quantity");
+            if (!qtyN) return toast.error("Enter a quantity");
+            if (type === "purchase" && !totN) return toast.error("Enter total price");
             mutation.mutate();
           }}
         >
@@ -106,7 +139,7 @@ export function RecordTransactionDialog({ items, defaultItemId, trigger, default
               <Select value={type} onValueChange={(v) => setType(v as TransactionType)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="purchase">Purchase (stock in)</SelectItem>
+                  <SelectItem value="purchase">Purchase (new batch in)</SelectItem>
                   <SelectItem value="sale">Sale (stock out)</SelectItem>
                   <SelectItem value="adjustment">Adjustment (±)</SelectItem>
                 </SelectContent>
@@ -114,57 +147,83 @@ export function RecordTransactionDialog({ items, defaultItemId, trigger, default
             </div>
             <div className="grid gap-2">
               <Label>Item</Label>
-              <Select value={itemId} onValueChange={(v) => {
-                setItemId(v);
-                const it = items.find((i) => i.id === v);
-                if (it && !unitPrice) setUnitPrice(String(it.unit_price));
-              }}>
+              <Select
+                value={itemId}
+                onValueChange={(v) => {
+                  setItemId(v);
+                  const it = items.find((i) => i.id === v);
+                  if (it) {
+                    setPackUnit(it.unit || "crates");
+                    if (!unitPrice) setUnitPrice(String(it.unit_price));
+                  }
+                }}
+              >
                 <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
                 <SelectContent>
                   {items.map((i) => (
-                    <SelectItem key={i.id} value={i.id}>
-                      {i.name} {i.sku ? `· ${i.sku}` : ""}
-                    </SelectItem>
+                    <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="q">Quantity {selected ? `(${selected.unit})` : ""}</Label>
-              <Input id="q" type="number" inputMode="decimal" step="0.01" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder={type === "adjustment" ? "use negative for loss" : "0"} />
-              {type === "adjustment" && (
-                <p className="text-xs text-muted-foreground">Use a negative number for losses or damage.</p>
-              )}
+          {type === "purchase" ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="q">Quantity</Label>
+                  <Input id="q" type="number" inputMode="decimal" step="0.01" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g. 6" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Pack unit</Label>
+                  <Select value={packUnit} onValueChange={setPackUnit}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PACK_UNITS.map((u) => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tp">Total price (₵)</Label>
+                <Input id="tp" type="number" inputMode="decimal" step="0.01" min="0" value={totalPrice} onChange={(e) => setTotalPrice(e.target.value)} placeholder="e.g. 250.00" />
+                {qtyN > 0 && totN > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Unit price: <span className="font-semibold text-foreground">{formatCurrency(derivedUnit)}</span> per {packUnit.replace(/s$/, "")}
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="q">Quantity {selected ? `(${selected.unit})` : ""}</Label>
+                <Input id="q" type="number" inputMode="decimal" step="0.01" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder={type === "adjustment" ? "use negative for loss" : "0"} />
+                {type === "adjustment" && (
+                  <p className="text-xs text-muted-foreground">Use a negative number for losses or damage.</p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="p">Unit price (₵)</Label>
+                <Input id="p" type="number" inputMode="decimal" step="0.01" min="0" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0.00" />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="p">Unit price</Label>
-              <Input id="p" type="number" inputMode="decimal" step="0.01" min="0" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0.00" />
-            </div>
-          </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="note">Note</Label>
             <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Supplier, invoice no., reason…" rows={2} />
           </div>
 
-          {quantity && unitPrice && (
-            <div className="rounded-lg bg-muted/60 px-4 py-2.5 text-sm">
-              <span className="text-muted-foreground">Total: </span>
-              <span className="font-semibold tabular">
-                {formatCurrency(Number(quantity) * Number(unitPrice))}
-              </span>
-            </div>
-          )}
-
           <DialogFooter className="mt-2">
             <DialogClose asChild>
               <Button type="button" variant="ghost">Cancel</Button>
             </DialogClose>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving…" : "Record transaction"}
+              {mutation.isPending ? "Saving…" : type === "purchase" ? "Record purchase" : "Record transaction"}
             </Button>
           </DialogFooter>
         </form>

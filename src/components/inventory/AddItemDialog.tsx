@@ -15,34 +15,50 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createItem } from "@/lib/inventory";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { createItemWithOpening, formatCurrency, PACK_UNITS } from "@/lib/inventory";
 
 export function AddItemDialog() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     name: "",
-    sku: "",
-    unit: "unit",
-    unit_price: "",
-    current_quantity: "",
     low_stock_threshold: "0",
+    opening_quantity: "",
+    pack_unit: "crates",
+    opening_total_price: "",
   });
   const qc = useQueryClient();
+
+  const qty = Number(form.opening_quantity) || 0;
+  const tot = Number(form.opening_total_price) || 0;
+  const unitPrice = qty > 0 ? tot / qty : 0;
+
   const mutation = useMutation({
     mutationFn: () =>
-      createItem({
+      createItemWithOpening({
         name: form.name,
-        sku: form.sku,
-        unit: form.unit,
-        unit_price: Number(form.unit_price) || 0,
-        current_quantity: Number(form.current_quantity) || 0,
         low_stock_threshold: Number(form.low_stock_threshold) || 0,
+        opening_quantity: qty,
+        pack_unit: form.pack_unit,
+        opening_total_price: tot,
       }),
     onSuccess: () => {
       toast.success("Item added to inventory");
       qc.invalidateQueries({ queryKey: ["items"] });
-      qc.invalidateQueries({ queryKey: ["transactions"] });
-      setForm({ name: "", sku: "", unit: "unit", unit_price: "", current_quantity: "", low_stock_threshold: "0" });
+      qc.invalidateQueries({ queryKey: ["batches"] });
+      setForm({
+        name: "",
+        low_stock_threshold: "0",
+        opening_quantity: "",
+        pack_unit: "crates",
+        opening_total_price: "",
+      });
       setOpen(false);
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to add item"),
@@ -59,7 +75,8 @@ export function AddItemDialog() {
         <DialogHeader>
           <DialogTitle>Add a new stock item</DialogTitle>
           <DialogDescription>
-            Create a product entry with its unit price and starting quantity.
+            Create the product and record the stock already in the warehouse (opening stock) with its
+            total price.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -72,32 +89,90 @@ export function AddItemDialog() {
         >
           <div className="grid gap-2">
             <Label htmlFor="name">Item name *</Label>
-            <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. A4 Printer Paper" />
+            <Input
+              id="name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="e.g. Minerals (Soft drinks)"
+            />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="sku">SKU / Code</Label>
-              <Input id="sku" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="optional" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="unit">Unit</Label>
-              <Input id="unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="box, kg, pcs" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="price">Unit price *</Label>
-              <Input id="price" inputMode="decimal" type="number" step="0.01" min="0" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} placeholder="0.00" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="qty">Starting quantity</Label>
-              <Input id="qty" inputMode="decimal" type="number" step="0.01" min="0" value={form.current_quantity} onChange={(e) => setForm({ ...form, current_quantity: e.target.value })} placeholder="0" />
-            </div>
-          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="threshold">Low-stock alert threshold</Label>
-            <Input id="threshold" inputMode="decimal" type="number" step="0.01" min="0" value={form.low_stock_threshold} onChange={(e) => setForm({ ...form, low_stock_threshold: e.target.value })} />
+            <Input
+              id="threshold"
+              inputMode="decimal"
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.low_stock_threshold}
+              onChange={(e) => setForm({ ...form, low_stock_threshold: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Get warned when remaining quantity falls to or below this number.
+            </p>
           </div>
+
+          <div className="rounded-lg border border-border/60 bg-surface-muted/40 p-4">
+            <h4 className="text-sm font-semibold">Opening stock (old stock in warehouse)</h4>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Leave blank if there's no existing stock yet.
+            </p>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="qty">Quantity</Label>
+                <Input
+                  id="qty"
+                  inputMode="decimal"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.opening_quantity}
+                  onChange={(e) => setForm({ ...form, opening_quantity: e.target.value })}
+                  placeholder="e.g. 4"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Pack unit</Label>
+                <Select
+                  value={form.pack_unit}
+                  onValueChange={(v) => setForm({ ...form, pack_unit: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PACK_UNITS.map((u) => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-2">
+              <Label htmlFor="total">Total price (₵)</Label>
+              <Input
+                id="total"
+                inputMode="decimal"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.opening_total_price}
+                onChange={(e) => setForm({ ...form, opening_total_price: e.target.value })}
+                placeholder="e.g. 160.00"
+              />
+              {qty > 0 && tot > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Unit price: <span className="font-semibold text-foreground">{formatCurrency(unitPrice)}</span> per {form.pack_unit.replace(/s$/, "")}
+                </p>
+              )}
+            </div>
+          </div>
+
           <DialogFooter className="mt-2">
             <DialogClose asChild>
               <Button type="button" variant="ghost">Cancel</Button>

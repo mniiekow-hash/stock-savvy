@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDownToLine, ArrowUpFromLine, Package, Search, Trash2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ArrowDownToLine, ArrowUpFromLine, ExternalLink, Package, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,7 @@ export function InventoryTable({ items }: { items: StockItem[] }) {
 
   const filtered = items.filter((i) => {
     const s = q.toLowerCase();
-    return !s || i.name.toLowerCase().includes(s) || (i.sku ?? "").toLowerCase().includes(s);
+    return !s || i.name.toLowerCase().includes(s);
   });
 
   return (
@@ -41,7 +42,7 @@ export function InventoryTable({ items }: { items: StockItem[] }) {
         <div>
           <h2 className="text-base font-semibold tracking-tight">Stock on hand</h2>
           <p className="text-xs text-muted-foreground">
-            {items.length} item{items.length === 1 ? "" : "s"} tracked
+            {items.length} item{items.length === 1 ? "" : "s"} · click a row to see all batches
           </p>
         </div>
         <div className="relative w-full sm:w-72">
@@ -49,7 +50,7 @@ export function InventoryTable({ items }: { items: StockItem[] }) {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name or SKU…"
+            placeholder="Search by name…"
             className="pl-9 bg-surface"
           />
         </div>
@@ -62,7 +63,7 @@ export function InventoryTable({ items }: { items: StockItem[] }) {
           </div>
           <h3 className="mt-4 text-base font-semibold">No stock items yet</h3>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Add your first item to start tracking quantities, prices, and movements.
+            Add your first item to start tracking batches, prices, and movements.
           </p>
         </div>
       ) : (
@@ -71,8 +72,8 @@ export function InventoryTable({ items }: { items: StockItem[] }) {
             <TableHeader>
               <TableRow className="bg-surface-muted/40">
                 <TableHead>Item</TableHead>
-                <TableHead className="text-right">Unit price</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
+                <TableHead className="text-right">Latest unit price</TableHead>
+                <TableHead className="text-right">Remaining</TableHead>
                 <TableHead className="text-right">Stock value</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -86,14 +87,20 @@ export function InventoryTable({ items }: { items: StockItem[] }) {
                 return (
                   <TableRow key={it.id} className="group">
                     <TableCell>
-                      <div className="font-medium text-foreground">{it.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {it.sku ? `${it.sku} · ` : ""}per {it.unit}
-                      </div>
+                      <Link
+                        to="/items/$itemId"
+                        params={{ itemId: it.id }}
+                        className="inline-flex items-center gap-1.5 font-medium text-foreground hover:text-primary"
+                      >
+                        {it.name}
+                        <ExternalLink className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                      </Link>
+                      <div className="text-xs text-muted-foreground">per {it.unit.replace(/s$/, "")}</div>
                     </TableCell>
                     <TableCell className="text-right tabular">{formatCurrency(it.unit_price)}</TableCell>
                     <TableCell className="text-right tabular font-medium">
-                      {formatNumber(it.current_quantity)} <span className="text-muted-foreground font-normal">{it.unit}</span>
+                      {formatNumber(it.current_quantity)}{" "}
+                      <span className="text-muted-foreground font-normal">{it.unit}</span>
                     </TableCell>
                     <TableCell className="text-right tabular font-semibold">{formatCurrency(value)}</TableCell>
                     <TableCell>
@@ -132,7 +139,7 @@ export function InventoryTable({ items }: { items: StockItem[] }) {
                           variant="ghost"
                           className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => {
-                            if (confirm(`Delete "${it.name}"? This removes its transaction history too.`)) {
+                            if (confirm(`Delete "${it.name}"? This removes its batches and history too.`)) {
                               del.mutate(it.id);
                             }
                           }}
