@@ -89,11 +89,12 @@ export async function recordTransaction(input: {
 }
 
 export function formatCurrency(n: number) {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
+  // Ghana Cedi (GHS) — render with the ₵ symbol
+  const formatted = new Intl.NumberFormat("en-GH", {
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(n);
+  }).format(n || 0);
+  return `₵${formatted}`;
 }
 
 export function formatNumber(n: number) {

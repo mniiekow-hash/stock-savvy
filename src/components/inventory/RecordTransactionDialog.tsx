@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { recordTransaction, type StockItem, type TransactionType } from "@/lib/inventory";
+import { recordTransaction, formatCurrency, type StockItem, type TransactionType } from "@/lib/inventory";
 
 type Props = {
   items: StockItem[];
@@ -154,9 +154,7 @@ export function RecordTransactionDialog({ items, defaultItemId, trigger, default
             <div className="rounded-lg bg-muted/60 px-4 py-2.5 text-sm">
               <span className="text-muted-foreground">Total: </span>
               <span className="font-semibold tabular">
-                {new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(
-                  Number(quantity) * Number(unitPrice),
-                )}
+                {formatCurrency(Number(quantity) * Number(unitPrice))}
               </span>
             </div>
           )}

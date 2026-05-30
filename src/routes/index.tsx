@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Boxes, DollarSign, PackageCheck } from "lucide-react";
+import { AlertTriangle, Boxes, Wallet, PackageCheck } from "lucide-react";
 import {
   fetchItems,
   fetchTransactions,
@@ -78,10 +78,10 @@ function DashboardPage() {
         {/* KPIs */}
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            label="Total stock value"
+            label="Total stock value (GH₵)"
             value={formatCurrency(totalValue)}
             hint="Quantity × unit price"
-            icon={DollarSign}
+            icon={Wallet}
             tone="primary"
           />
           <StatCard
