@@ -43,40 +43,42 @@ function DashboardPage() {
   const lowStock = items.filter((i) => i.current_quantity <= i.low_stock_threshold).length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-hidden bg-background">
       {/* Header */}
       <header className="border-b border-border/60 bg-surface/80 backdrop-blur">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4 sm:px-10">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4 lg:px-10">
+          <div className="flex min-w-0 items-center gap-3">
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground shadow-[var(--shadow-soft)]"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-primary-foreground shadow-[var(--shadow-soft)]"
               style={{ background: "var(--gradient-hero)" }}
             >
               <Boxes className="h-5 w-5" />
             </div>
-            <div>
-              <h1 className="text-base font-semibold tracking-tight">StockLedger</h1>
-              <p className="text-xs text-muted-foreground">Organizational inventory & stock tracker</p>
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-semibold tracking-tight">StockLedger</h1>
+              <p className="hidden truncate text-xs text-muted-foreground sm:block">
+                Organizational inventory & stock tracker
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
             <RecordTransactionDialog items={items} />
             <AddItemDialog />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1600px] px-6 py-8 sm:px-10">
+      <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
         {/* Hero / title */}
-        <section className="mb-8">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Inventory overview</h2>
+        <section className="mb-6 sm:mb-8">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">Inventory overview</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             Real-time picture of what you own, what it cost, and what's left on the shelf.
           </p>
         </section>
 
         {/* KPIs */}
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard
             label="Total stock value (GH₵)"
             value={formatCurrency(totalValue)}
@@ -108,15 +110,15 @@ function DashboardPage() {
         </section>
 
         {/* Main grid */}
-        <section className="mt-8 grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+        <section className="mt-6 grid gap-6 sm:mt-8 lg:grid-cols-3">
+          <div className="min-w-0 lg:col-span-2">
             {itemsQ.isLoading ? (
               <div className="h-64 animate-pulse rounded-xl border border-border/60 bg-surface-muted/50" />
             ) : (
               <InventoryTable items={items} />
             )}
           </div>
-          <div>
+          <div className="min-w-0">
             {txQ.isLoading ? (
               <div className="h-64 animate-pulse rounded-xl border border-border/60 bg-surface-muted/50" />
             ) : (

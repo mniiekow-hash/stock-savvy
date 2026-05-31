@@ -39,14 +39,14 @@ function ItemDetailPage() {
   const purchases = batches.filter((b) => !b.is_opening_stock);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-hidden bg-background">
       <header className="border-b border-border/60 bg-surface/80 backdrop-blur">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-4 sm:px-10">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-10">
           <Link
             to="/"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to inventory
+            <ArrowLeft className="h-4 w-4" /> <span className="hidden xs:inline sm:inline">Back to inventory</span><span className="xs:hidden sm:hidden">Back</span>
           </Link>
           {item && (
             <RecordTransactionDialog
@@ -58,27 +58,27 @@ function ItemDetailPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1400px] px-6 py-8 sm:px-10">
+      <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
         {itemQ.isLoading ? (
           <div className="h-32 animate-pulse rounded-xl bg-surface-muted/50" />
         ) : item ? (
           <>
-            <section className="mb-8 flex items-start gap-4">
+            <section className="mb-6 flex items-start gap-3 sm:mb-8 sm:gap-4">
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl text-primary-foreground shadow-[var(--shadow-soft)]"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-primary-foreground shadow-[var(--shadow-soft)] sm:h-12 sm:w-12"
                 style={{ background: "var(--gradient-hero)" }}
               >
-                <Boxes className="h-6 w-6" />
+                <Boxes className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">{item.name}</h1>
+              <div className="min-w-0">
+                <h1 className="break-words text-2xl font-bold tracking-tight sm:text-3xl">{item.name}</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Full purchase history — each batch is kept separately with its own price.
                 </p>
               </div>
             </section>
 
-            <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <section className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-4">
               <StatCard
                 label="Remaining quantity"
                 value={`${formatNumber(item.current_quantity)} ${item.unit}`}
@@ -123,7 +123,7 @@ function ItemDetailPage() {
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
-                  {batches.map((b, i) => (
+                  {batches.map((b) => (
                     <BatchCard
                       key={b.id}
                       batch={b}
