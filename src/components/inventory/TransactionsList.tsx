@@ -13,7 +13,7 @@ const typeMeta = {
 export function TransactionsList({ transactions }: { transactions: Row[] }) {
   return (
     <Card className="overflow-hidden border-border/60 shadow-[var(--shadow-soft)]">
-      <div className="border-b border-border/60 bg-surface-muted/60 px-5 py-4">
+      <div className="border-b border-border/60 bg-surface-muted/60 px-4 py-3 sm:px-5 sm:py-4">
         <h2 className="text-base font-semibold tracking-tight">Recent activity</h2>
         <p className="text-xs text-muted-foreground">Latest stock movements</p>
       </div>
@@ -28,26 +28,26 @@ export function TransactionsList({ transactions }: { transactions: Row[] }) {
             const Icon = meta.icon;
             const date = new Date(t.created_at);
             return (
-              <li key={t.id} className="flex items-start gap-3 px-5 py-3.5">
+              <li key={t.id} className="flex items-start gap-3 px-4 py-3 sm:px-5 sm:py-3.5">
                 <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${meta.tone}`}>
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-medium">
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium">
                       {t.stock_items?.name ?? "Unknown item"}
                     </p>
-                    <span className="text-sm font-semibold tabular">
+                    <span className="shrink-0 text-sm font-semibold tabular">
                       {t.type === "sale" ? "−" : t.type === "adjustment" && t.quantity < 0 ? "" : "+"}
                       {formatNumber(Math.abs(t.quantity))} {t.stock_items?.unit ?? ""}
                     </span>
                   </div>
-                  <div className="mt-0.5 flex items-center justify-between gap-2">
-                    <p className="truncate text-xs text-muted-foreground">
+                  <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+                    <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                       {meta.label} · {date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
                       {t.note ? ` · ${t.note}` : ""}
                     </p>
-                    <span className="text-xs tabular text-muted-foreground">
+                    <span className="shrink-0 text-xs tabular text-muted-foreground">
                       {formatCurrency(t.total_amount)}
                     </span>
                   </div>
