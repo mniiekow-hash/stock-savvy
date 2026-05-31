@@ -1,52 +1,42 @@
-## What changes
+## Goal
+Right now the dashboard is built for a laptop screen, so on Android/iPhone the content overflows horizontally and users have to scroll sideways to see actions, table columns, and the "Recent activity" panel. I'll make every screen adapt cleanly to small phones (≈360px and up) without changing any business logic.
 
-Restructure inventory so each purchase is a separate **batch** (preserved forever with its own price), not an overwrite. Each item gets a detail page that stacks every batch — old in-stock first, then each new purchase — as separate "sheets" with the same headings.
+## What I'll change (UI only)
 
-## Data model
+### 1. Dashboard header (`src/routes/index.tsx`)
+- Reduce horizontal padding on mobile (`px-4` → `sm:px-6` → `lg:px-10`) so it stops overflowing.
+- Allow the header to wrap: logo + title on one row, action buttons (`Record transaction`, `Add item`) drop to a second row on phones and become full-width.
+- Shrink the title font on mobile and hide the subtitle on very small screens to keep one tidy row.
 
-Add a new `stock_batches` table:
-- `item_id`, `quantity` (number), `pack_unit` (crates/packs/boxes/etc.), `total_price`, `unit_price` (auto-calculated = total / quantity), `is_opening_stock` (true for the starting/old stock entry), `note`, `created_at`.
+### 2. Hero / KPI section
+- Bring "Inventory overview" heading from `text-3xl/4xl` down to `text-2xl` on mobile.
+- KPI grid: already `sm:grid-cols-2 lg:grid-cols-4`, but stat cards themselves are too tall — reduce padding (`p-4 sm:p-5`) and the value font (`text-2xl sm:text-3xl`) in `StatCard.tsx` so 2 fit per row on a 360px screen.
 
-Keep `stock_items` for item-level info (name, low-stock threshold). Drop the per-item `unit_price` / `current_quantity` from the form — these now derive from batches:
-- **Remaining quantity** = sum of all batch quantities − sales
-- **Latest price** = most recent batch's unit price
-- **Average price** = total spent ÷ total quantity (shown on detail page)
+### 3. Inventory table (`src/components/inventory/InventoryTable.tsx`) — the main culprit
+The table has 6 columns and forces a horizontal scrollbar on phones. I'll:
+- Keep the full table for `md` and up (unchanged).
+- On mobile (`<md`), render the same items as **stacked cards** instead of a table:
+  - Top row: item name (link) + status badge.
+  - Middle: remaining qty, latest unit price, stock value as a 2-col mini-grid.
+  - Bottom: `Buy in`, `Sell`, `Delete` action buttons in a single row, full width.
+- Move the search input above the list and make it full-width on mobile.
 
-`stock_transactions` stays for sales/adjustments only.
+### 4. Recent activity panel (`TransactionsList.tsx`)
+- Already stacks below the table on mobile thanks to `lg:grid-cols-3`, just tighten padding (`px-4 sm:px-5`) and let the right-side amount wrap under the date on very narrow screens so nothing clips.
 
-## Add Stock Item form (simplified)
+### 5. Item detail page (`src/routes/items.$itemId.tsx`)
+- Same padding fix (`px-4 sm:px-6 lg:px-10`).
+- Shrink the item title to `text-2xl sm:text-3xl`.
+- Stat grid uses the same 2-up mobile layout as the dashboard.
+- Batch grid: already `md:grid-cols-2`, fine — just make sure `BatchCard` content doesn't overflow (wrap long notes, shrink price font on mobile).
 
-Fields: **Item name**, **Low-stock alert threshold**. Then a "starting stock" section:
-- Quantity (number) + Pack unit (dropdown: crates, packs, boxes, cartons, bags, sacks, bundles, dozens, pieces — plus custom)
-- Total price (₵) — app shows unit price live
+### 6. Global safeguard
+- Add `overflow-x-hidden` on the page root containers so any stray wide element can't cause the whole viewport to scroll sideways again.
+- Verify dialogs (`AddItemDialog`, `RecordTransactionDialog`) use `max-w-[calc(100vw-2rem)]` so they don't get cut off on small screens.
 
-Saving creates the item + one opening batch flagged `is_opening_stock = true`.
+## Out of scope
+- No changes to data model, queries, batch logic, or pricing rules.
+- No new pages or features — purely layout/CSS adjustments to existing components.
 
-## Record Purchase dialog
-
-Pick item → enter quantity + pack unit + total price → save. Creates a new batch row. (Sales/adjustments stay as transactions.)
-
-## Per-item detail page (`/items/$itemId`)
-
-The "two sheets" view. Header shows item name, total remaining, average unit price, latest unit price.
-
-Below that, a vertical stack of cards — one per batch — each with identical headings:
-
-```
-┌─ Opening stock · 12 May 2026 ──────┐    ┌─ Purchase · 28 May 2026 ──────┐
-│ Quantity:     4 crates             │    │ Quantity:     6 crates         │
-│ Total price:  ₵160.00              │    │ Total price:  ₵250.00          │
-│ Unit price:   ₵40.00 / crate       │    │ Unit price:   ₵41.67 / crate   │
-└────────────────────────────────────┘    └────────────────────────────────┘
-```
-
-Newest batch on top. Clicking an item row in the dashboard table opens this page.
-
-## Files
-
-- Migration: create `stock_batches`, backfill from existing `stock_items` opening data, update `apply_stock_transaction` trigger to read remaining qty from batches.
-- New route: `src/routes/items.$itemId.tsx`
-- New component: `src/components/inventory/BatchCard.tsx`
-- Update: `AddItemDialog.tsx` (new fields), `RecordTransactionDialog.tsx` (purchase writes a batch), `InventoryTable.tsx` (link rows to detail page, show derived qty/price), `src/lib/inventory.ts` (batch CRUD + helpers), pack-unit constant list.
-
-Confirm and I'll switch to build mode.
+## How I'll verify
+After changes, I'll preview at mobile width (375px) to confirm: no horizontal scroll, all header actions reachable without sliding, inventory rows readable as cards, KPIs in 2 columns, dialogs fit within the screen.
